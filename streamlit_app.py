@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Tuple
 
-import feedparser
+#import feedparser
 import pandas as pd
 import streamlit as st
 from bs4 import BeautifulSoup
