@@ -1,10 +1,5 @@
 import streamlit as st
 
-st.title("CSS2026 Final Streamlit App: ML/NLP Research Portfolio")
-st.write(
-    "Research Summary about online articles for Machine Learning (ML) and Natural Language Processing (NLP)."
-)
-
 import re
 import textwrap
 from dataclasses import dataclass
@@ -359,7 +354,7 @@ def load_articles(
             articles.append(art)
 
     # Sort by date desc (unknown dates at bottom)
-    articles.sort(key=lambda a: a.published or datetime(1970, 1, 1, tzinfo=timezone.utc), reverse=True)
+    articles.sort(key=lambda a: a.published or datetime(2000, 1, 1, tzinfo=timezone.utc), reverse=True)  # From year 2000
     return articles
 
 
@@ -386,12 +381,17 @@ def summarize_articles(
 
 
 # -----------------------------
-# UI
+# User Interface (UI) - the aesthetics
 # -----------------------------
 st.set_page_config(page_title="ML/NLP Research Portfolio", layout="wide")
 
-st.title("📚 ML & NLP Research Portfolio (RSS + Summaries)")
+st.title("CSS2026 Final Streamlit App: ML/NLP Research Portfolio")
+
 st.caption("Aggregate research articles/blog posts, auto-summarize, save to a portfolio, and export.")
+
+st.write(
+    "Research Portfolio based on online publications in Machine Learning (ML) and Natural Language Processing (NLP)."
+)
 
 # Session state for portfolio
 if "portfolio" not in st.session_state:
@@ -399,10 +399,10 @@ if "portfolio" not in st.session_state:
 
 # Sidebar controls
 with st.sidebar:
-    st.header("⚙️ Controls")
+    st.header("Controls")
 
-    max_items_per_source = st.slider("Max items per source", 5, 50, 20, 5)
-    only_last_days = st.slider("Show items from last (days)", 1, 90, 21, 1)
+    max_items_per_source = st.slider("Max items per source", 2, 20, 2, 2)
+    only_last_days = st.slider("Show items from last (days)", 15, 365, 90, 5)
     keyword = st.text_input("Keyword filter (title/summary)", "")
     use_fulltext = st.checkbox("Try full-text extraction (recommended)", True)
 
@@ -477,7 +477,7 @@ if page == "Feed":
                 # Save to portfolio
                 save_cols = st.columns([1, 4])
                 with save_cols[0]:
-                    if st.button("⭐ Save", key=f"save_{i}", width='stretch'):
+                    if st.button("Save", key=f"save_{i}", width='stretch'):
                         st.session_state.portfolio.append({
                             "title": a.title,
                             "link": a.link,
@@ -486,12 +486,12 @@ if page == "Feed":
                             "tags": a.tags,
                             "notes": ""
                         })
-                        st.toast("Saved to portfolio", icon="⭐")
+                        st.toast("Saved to portfolio", icon="")
                 with save_cols[1]:
                     st.caption("Save items you want to track, annotate, and export.")
 
     with colB:
-        st.subheader("📈 Quick stats")
+        st.subheader("Quick stats")
         if "articles" in locals() and articles:
             df = articles_to_df(articles)
             st.dataframe(df[["published", "source", "title"]], width='stretch', height=420)
@@ -506,10 +506,10 @@ if page == "Feed":
 
 
 elif page == "Portfolio":
-    st.header("⭐ Your Saved Portfolio")
+    st.header("Your Saved Portfolio")
 
     if not st.session_state.portfolio:
-        st.info("Your portfolio is empty. Go to **Feed** and click ⭐ Save on items you like.")
+        st.info("Your portfolio is empty. Go to **Feed** and click Save on items you like.")
     else:
         pf = pd.DataFrame(st.session_state.portfolio)
         st.caption(f"{len(pf)} saved items")
