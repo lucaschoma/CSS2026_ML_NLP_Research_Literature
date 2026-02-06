@@ -1,2 +1,10 @@
 streamlit
 feedparser
+pandas
+beautifulsoup4
+python-dateutil
+trafilatura
+sumy
+nltk
+torch
+transformers
