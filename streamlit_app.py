@@ -2,7 +2,7 @@ import streamlit as st
 
 st.title("CSS2026 Final Streamlit App: ML/NLP Research Portfolio")
 st.write(
-    "Research Summary about online articles about Machine Learning (ML) and Natural Language Processing (NLP)."
+    "Research Summary about online articles for Machine Learning (ML) and Natural Language Processing (NLP)."
 )
 
 import re
@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Tuple
 
-#import feedparser
+import feedparser
 import pandas as pd
 import streamlit as st
 from bs4 import BeautifulSoup
@@ -29,6 +29,7 @@ from sumy.summarizers.lex_rank import LexRankSummarizer
 import nltk
 try:
     nltk.data.find("tokenizers/punkt")
+    nltk.download('punkt_tab')
 except LookupError:
     nltk.download("punkt", quiet=True)
 
@@ -105,16 +106,67 @@ def safe_parse_date(entry: dict) -> Optional[datetime]:
     return None
 
 
-def extract_tags(entry: dict) -> str:
-    if "tags" in entry and entry["tags"]:
-        return ", ".join([t.get("term", "") for t in entry["tags"] if t.get("term")])
-    return ""
 
+def extract_tags(entry: dict) -> str:
+    """
+    Robust tag extraction supporting:
+    - list[str]                 (our sanitized format)
+    - list[dict] with 'term'    (raw feedparser format)
+    - missing/None
+    """
+    tags = entry.get("tags", [])
+    if not tags:
+        return ""
+
+    out = []
+    for t in tags:
+        if isinstance(t, dict):
+            term = t.get("term", "")
+            if term:
+                out.append(term)
+        elif isinstance(t, str):
+            if t.strip():
+                out.append(t.strip())
+
+    # de-duplicate while preserving order
+    seen = set()
+    unique = []
+    for t in out:
+        if t not in seen:
+            unique.append(t)
+            seen.add(t)
+
+    return ", ".join(unique)
+
+
+from typing import Any
 
 @st.cache_data(ttl=60 * 30, show_spinner=False)
-def fetch_feed(url: str) -> feedparser.FeedParserDict:
-    """Fetch and parse an RSS/Atom feed with caching."""
-    return feedparser.parse(url)
+def fetch_feed_entries(url: str, limit: int) -> List[Dict[str, Any]]:
+    """
+    Fetch RSS/Atom and return ONLY pickle-safe entry dicts.
+    We avoid returning feedparser.FeedParserDict because it may not be pickleable.
+    """
+    parsed = feedparser.parse(url)
+    entries = parsed.get("entries", [])[:limit]
+
+    safe_entries: List[Dict[str, Any]] = []
+    for e in entries:
+        safe_entries.append({
+            "title": e.get("title", ""),
+            "link": e.get("link", ""),
+            "author": e.get("author", ""),
+            "summary": e.get("summary", "") or e.get("description", ""),
+            # keep both string and parsed tuples for robust date parsing
+            "published": e.get("published", "") or e.get("updated", ""),
+            "updated": e.get("updated", ""),
+            "published_parsed": tuple(e.get("published_parsed", ())) if e.get("published_parsed") else (),
+            "updated_parsed": tuple(e.get("updated_parsed", ())) if e.get("updated_parsed") else (),
+            # normalize tags into a simple list[str]
+            "tags": [t.get("term", "") for t in (e.get("tags", []) or []) if isinstance(t, dict) and t.get("term")],
+        })
+
+    return safe_entries
 
 
 @st.cache_data(ttl=60 * 60, show_spinner=False)
@@ -153,13 +205,18 @@ def lexrank_summarize(text: str, sentences: int = 4) -> str:
     return " ".join(str(s) for s in summary_sentences).strip()
 
 
-def try_transformers_summarize(text: str, max_length: int = 160, min_length: int = 60) -> Optional[str]:
+def try_transformers_summarize(
+    text: str,
+    max_new_tokens: int = 160,
+    min_new_tokens: int = 60
+) -> Optional[str]:
     """
-    Optional abstractive summary using Hugging Face transformers.
-    Only used if user enables it AND dependencies are installed.
+    Abstractive summary using HF transformers WITHOUT pipeline task strings.
+    This avoids KeyError when 'summarization' isn't registered in your transformers build.
     """
     try:
-        from transformers import pipeline
+        import torch
+        from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
     except Exception:
         return None
 
@@ -167,15 +224,45 @@ def try_transformers_summarize(text: str, max_length: int = 160, min_length: int
     if len(text) < 200:
         return textwrap.shorten(text, width=400, placeholder="…")
 
-    # Lazy-init pipeline (may download model; best used in environments with cache)
-    summarizer = pipeline("summarization", model="sshleifer/distilbart-cnn-12-6")
-    # Chunk long text to avoid max token issues
-    chunks = chunk_text(text, max_chars=3000)
-    outputs = []
-    for ch in chunks[:3]:
-        out = summarizer(ch, max_length=max_length, min_length=min_length, do_sample=False)
-        outputs.append(out[0]["summary_text"])
-    return " ".join(outputs).strip()
+    model_name = "sshleifer/distilbart-cnn-12-6"
+
+    try:
+        tokenizer = AutoTokenizer.from_pretrained(model_name)
+        model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
+
+        # Optional: move to GPU if available
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        model = model.to(device)
+
+        chunks = chunk_text(text, max_chars=2500)
+        summaries = []
+
+        for ch in chunks[:3]:
+            inputs = tokenizer(
+                ch,
+                return_tensors="pt",
+                truncation=True,
+                max_length=1024
+            ).to(device)
+
+            with torch.no_grad():
+                output_ids = model.generate(
+                    **inputs,
+                    num_beams=4,
+                    do_sample=False,
+                    min_new_tokens=min_new_tokens,
+                    max_new_tokens=max_new_tokens,
+                    length_penalty=1.0,
+                    early_stopping=True
+                )
+
+            summaries.append(tokenizer.decode(output_ids[0], skip_special_tokens=True))
+
+        return " ".join(summaries).strip()
+
+    except Exception:
+        # If model can't be downloaded/loaded in your environment, return None and fall back to LexRank.
+        return None
 
 
 def chunk_text(text: str, max_chars: int = 3000) -> List[str]:
@@ -236,8 +323,7 @@ def load_articles(
         if src.get("type") != "rss":
             continue
 
-        feed = fetch_feed(src["url"])
-        entries = feed.get("entries", [])[:max_items_per_source]
+        entries = fetch_feed_entries(src["url"], limit=max_items_per_source)
 
         for entry in entries:
             title = clean_text(entry.get("title", "Untitled"))
@@ -328,7 +414,7 @@ with st.sidebar:
     if st.checkbox("Show/Edit sources"):
         st.info("Tip: Add RSS/Atom feed URLs. RSS is the most reliable method.")
         sources_df = pd.DataFrame(DEFAULT_SOURCES)
-        edited = st.data_editor(sources_df, num_rows="dynamic", use_container_width=True)
+        edited = st.data_editor(sources_df, num_rows="dynamic", width="stretch")
         sources = edited.to_dict(orient="records")
     else:
         sources = DEFAULT_SOURCES
@@ -373,7 +459,7 @@ if page == "Feed":
                         st.write(a.tags)
                 with top[2]:
                     if a.link:
-                        st.link_button("Open article ↗", a.link, use_container_width=True)
+                        st.link_button("Open article ↗", a.link, width='stretch')
 
                 if a.auto_summary:
                     st.write(a.auto_summary)
@@ -391,7 +477,7 @@ if page == "Feed":
                 # Save to portfolio
                 save_cols = st.columns([1, 4])
                 with save_cols[0]:
-                    if st.button("⭐ Save", key=f"save_{i}", use_container_width=True):
+                    if st.button("⭐ Save", key=f"save_{i}", width='stretch'):
                         st.session_state.portfolio.append({
                             "title": a.title,
                             "link": a.link,
@@ -408,7 +494,7 @@ if page == "Feed":
         st.subheader("📈 Quick stats")
         if "articles" in locals() and articles:
             df = articles_to_df(articles)
-            st.dataframe(df[["published", "source", "title"]], use_container_width=True, height=420)
+            st.dataframe(df[["published", "source", "title"]], width='stretch', height=420)
 
             # Counts by source
             counts = df["source"].value_counts().reset_index()
@@ -430,7 +516,7 @@ elif page == "Portfolio":
 
         # Edit notes inline
         st.subheader("Edit notes")
-        edited_pf = st.data_editor(pf, use_container_width=True, num_rows="dynamic")
+        edited_pf = st.data_editor(pf, width='stretch', num_rows="dynamic")
         st.session_state.portfolio = edited_pf.to_dict(orient="records")
 
         st.divider()
