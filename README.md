@@ -17,3 +17,9 @@ A simple Streamlit app template for you to modify!
    ```
    $ streamlit run streamlit_app.py
    ```
+
+3. Check this old app link to see if it isa still running
+   ```
+   https://zany-fishstick-69xvw4q5ppj2r5j5-8501.app.github.dev/
+   ```
+   
