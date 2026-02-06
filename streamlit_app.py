@@ -1,10 +1,3 @@
-import streamlit as st
-
-st.title("CSS2026 Final Streamlit App: ML/NLP Research Portfolio")
-st.write(
-    "Research Summary about online articles for Machine Learning (ML) and Natural Language Processing (NLP)."
-)
-
 import re
 import textwrap
 from dataclasses import dataclass
@@ -16,6 +9,11 @@ import pandas as pd
 import streamlit as st
 from bs4 import BeautifulSoup
 from dateutil import parser as dateparser
+
+st.title("CSS2026 Final Streamlit App: ML/NLP Research Portfolio")
+st.write(
+    "Research Summary about online articles for Machine Learning (ML) and Natural Language Processing (NLP)."
+)
 
 # Full-text extraction (works well across many news/blog sites)
 import trafilatura
