@@ -10,10 +10,6 @@ import streamlit as st
 from bs4 import BeautifulSoup
 from dateutil import parser as dateparser
 
-st.title("CSS2026 Final Streamlit App: ML/NLP Research Portfolio")
-st.write(
-    "Research Summary about online articles for Machine Learning (ML) and Natural Language Processing (NLP)."
-)
 
 # Full-text extraction (works well across many news/blog sites)
 import trafilatura
@@ -388,8 +384,15 @@ def summarize_articles(
 # -----------------------------
 st.set_page_config(page_title="ML/NLP Research Portfolio", layout="wide")
 
-st.title("📚 ML & NLP Research Portfolio (RSS + Summaries)")
+st.title("CSS2026 Final Streamlit App: Machine Learning (ML) and Natural Language Processing (NLP) Research Portfolio")
+
 st.caption("Aggregate research articles/blog posts, auto-summarize, save to a portfolio, and export.")
+
+st.write(
+    "This is an a collection of online research articles and their summary for Machine Learning (ML) and Natural Language Processing (NLP). " \
+    "I use RSS to find and aggregate content from various sources, then apply extractive and abstractive summarization techniques to distill the key insights. " \
+    "You can save interesting articles to this portfolio, add notes/tags, and export for later reference."
+)
 
 # Session state for portfolio
 if "portfolio" not in st.session_state:
