@@ -400,16 +400,16 @@ if "portfolio" not in st.session_state:
 
 # Sidebar controls
 with st.sidebar:
-    st.header("⚙️ Controls")
+    st.header("Controls")
 
-    max_items_per_source = st.slider("Max items per source", 5, 50, 20, 5)
-    only_last_days = st.slider("Show items from last (days)", 1, 90, 21, 1)
+    max_items_per_source = st.slider("Max items per source", 2, 20, 5, 2)
+    only_last_days = st.slider("Show items from last (days)", 1, 365, 90, 5)
     keyword = st.text_input("Keyword filter (title/summary)", "")
     use_fulltext = st.checkbox("Try full-text extraction (recommended)", True)
 
     st.subheader("Summarization")
     prefer_transformers = st.checkbox("Use Transformers (abstractive, heavier)", False)
-    summary_sentences = st.slider("Extractive summary length (sentences)", 2, 8, 4, 1)
+    summary_sentences = st.slider("Extractive summary length (sentences)", 2, 7, 3, 1)
 
     st.subheader("Sources")
     if st.checkbox("Show/Edit sources"):
@@ -478,7 +478,7 @@ if page == "Feed":
                 # Save to portfolio
                 save_cols = st.columns([1, 4])
                 with save_cols[0]:
-                    if st.button("⭐ Save", key=f"save_{i}", width='stretch'):
+                    if st.button("Save", key=f"save_{i}", width='stretch'):
                         st.session_state.portfolio.append({
                             "title": a.title,
                             "link": a.link,
@@ -487,12 +487,12 @@ if page == "Feed":
                             "tags": a.tags,
                             "notes": ""
                         })
-                        st.toast("Saved to portfolio", icon="⭐")
+                        st.toast("Saved to portfolio", icon="*<3")
                 with save_cols[1]:
                     st.caption("Save items you want to track, annotate, and export.")
 
     with colB:
-        st.subheader("📈 Quick stats")
+        st.subheader("Quick stats")
         if "articles" in locals() and articles:
             df = articles_to_df(articles)
             st.dataframe(df[["published", "source", "title"]], width='stretch', height=420)
@@ -507,10 +507,10 @@ if page == "Feed":
 
 
 elif page == "Portfolio":
-    st.header("⭐ Your Saved Portfolio")
+    st.header("Your Saved Portfolio")
 
     if not st.session_state.portfolio:
-        st.info("Your portfolio is empty. Go to **Feed** and click ⭐ Save on items you like.")
+        st.info("Your portfolio is empty. Go to **Feed** and click \"*<3\" Save on items you like.")
     else:
         pf = pd.DataFrame(st.session_state.portfolio)
         st.caption(f"{len(pf)} saved items")
@@ -565,3 +565,4 @@ else:  # About
 - Use the sidebar **Show/Edit sources** to add your own feeds (lab blogs, company research blogs, newsletters, etc.)
         """
     )
+    
