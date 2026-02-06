@@ -1,8 +1,8 @@
 import streamlit as st
 
-st.title("🎈 My new app")
+st.title("CSS2026 Final Streamlit App: ML/NLP Research Portfolio")
 st.write(
-    "Let's start building! For help and inspiration, head over to [docs.streamlit.io](https://docs.streamlit.io/)."
+    "Research Summary about online articles about Machine Learning (ML) and Natural Language Processing (NLP)."
 )
 
 import re
