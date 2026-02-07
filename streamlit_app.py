@@ -7,7 +7,7 @@ from typing import Dict, List, Optional, Tuple
 import feedparser
 import pandas as pd
 import streamlit as st
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup as bs4
 from dateutil import parser as dateparser
 
 
