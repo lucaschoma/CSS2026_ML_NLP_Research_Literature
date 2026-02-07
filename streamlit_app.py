@@ -154,8 +154,8 @@ def fetch_feed_entries(url: str, limit: int) -> List[Dict[str, Any]]:
             # keep both string and parsed tuples for robust date parsing
             "published": e.get("published", "") or e.get("updated", ""),
             "updated": e.get("updated", ""),
-            "published_parsed": tuple(e.get("published_parsed", ())) if e.get("published_parsed") else (),
-            "updated_parsed": tuple(e.get("updated_parsed", ())) if e.get("updated_parsed") else (),
+            "published_parsed": tuple(e.get("published_parsed") or ()),
+            "updated_parsed": tuple(e.get("updated_parsed") or ()),
             # normalize tags into a simple list[str]
             "tags": [t.get("term", "") for t in (e.get("tags", []) or []) if isinstance(t, dict) and t.get("term")],
         })
@@ -403,13 +403,13 @@ with st.sidebar:
     st.header("Controls")
 
     max_items_per_source = st.slider("Max items per source", 2, 20, 5, 2)
-    only_last_days = st.slider("Show items from last (days)", 1, 365, 90, 5)
+    only_last_days = st.slider("Show items from last (days)", 5, 365, 90, 5)
     keyword = st.text_input("Keyword filter (title/summary)", "")
     use_fulltext = st.checkbox("Try full-text extraction (recommended)", True)
 
     st.subheader("Summarization")
     prefer_transformers = st.checkbox("Use Transformers (abstractive, heavier)", False)
-    summary_sentences = st.slider("Extractive summary length (sentences)", 2, 7, 3, 1)
+    summary_sentences = st.slider("Extractive summary length (sentences)", 2, 10, 4, 2)
 
     st.subheader("Sources")
     if st.checkbox("Show/Edit sources"):
@@ -565,4 +565,3 @@ else:  # About
 - Use the sidebar **Show/Edit sources** to add your own feeds (lab blogs, company research blogs, newsletters, etc.)
         """
     )
-    

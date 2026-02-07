@@ -8,3 +8,5 @@ sumy
 nltk
 torch
 transformers
+bs4
+trafilatura
